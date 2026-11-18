@@ -86,6 +86,8 @@ abstract class LyricsWidget : AppWidgetProvider() {
                 lineCount >= 7 || lines.size <= lineCount -> 0
                 else -> (current - lineCount / 2).coerceIn(0, lines.size - lineCount)
             }
+            val currentSp = if (lineCount == 7) CURRENT_SP_7 else CURRENT_SP_5
+            val otherSp = if (lineCount == 7) OTHER_SP_7 else OTHER_SP_5
             for (id in ids) {
                 val views = RemoteViews(context.packageName, layout)
                 for (i in 0 until lineCount) {
@@ -96,7 +98,7 @@ abstract class LyricsWidget : AppWidgetProvider() {
                         views.setTextViewText(viewId, lines[lineIndex])
                         views.setViewVisibility(viewId, View.VISIBLE)
                         views.setInt(viewId, "setTextColor", if (isCurrent) CURRENT_COLOR else OTHER_COLOR)
-                        views.setFloat(viewId, "setTextSize", if (isCurrent) CURRENT_SP else OTHER_SP)
+                        views.setFloat(viewId, "setTextSize", if (isCurrent) currentSp else otherSp)
                     } else {
                         views.setViewVisibility(viewId, View.GONE)
                     }
@@ -118,8 +120,11 @@ abstract class LyricsWidget : AppWidgetProvider() {
 
         private const val CURRENT_COLOR = 0xFFFFFFFF.toInt()
         private const val OTHER_COLOR = 0x99FFFFFF.toInt()
-        private const val CURRENT_SP = 18f
-        private const val OTHER_SP = 14f
+        private const val CURRENT_SP_5 = 18f
+        private const val OTHER_SP_5 = 14f
+        // The seven-line widget is 1.25× the five-line one, active and inactive.
+        private const val CURRENT_SP_7 = 22.5f
+        private const val OTHER_SP_7 = 17.5f
     }
 }
 
