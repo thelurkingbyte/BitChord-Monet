@@ -8073,21 +8073,27 @@ class PlaybackService : MediaLibraryService() {
         val lines = if (serviceLyricsFor == song.videoId) serviceLyrics else null
         val pos = crossfade?.loopPositionMs() ?: player?.currentPosition ?: 0L
         val idx = lines?.indexOfLast { it.timeMs <= pos } ?: -1
-        val previous = if (idx >= 1) lines?.getOrNull(idx - 1)?.takeIf { !it.isGap }?.text else null
-        val current = if (idx >= 0) lines?.getOrNull(idx)?.takeIf { !it.isGap }?.text else null
-        val next = if (idx >= 0) lines?.getOrNull(idx + 1)?.takeIf { !it.isGap }?.text else null
-        val key = "${song.videoId}|${previous.orEmpty()}|${current.orEmpty()}|${next.orEmpty()}"
+        val all = lines?.map { it.text } ?: emptyList()
+        // A seven-line window centred on the current line; the five-line widget
+        // takes a five-line slice of this, and the seven-line one shows it all.
+        val windowSize = 7
+        val start = if (idx >= 0) {
+            (idx - windowSize / 2).coerceIn(0, (all.size - windowSize).coerceAtLeast(0))
+        } else {
+            0
+        }
+        val end = minOf(start + windowSize, all.size)
+        val window = if (idx >= 0) all.subList(start, end) else emptyList()
+        val windowCurrent = if (idx >= 0) idx - start else -1
+        val key = "${song.videoId}|$idx|" + window.joinToString("\u0001")
         if (key == lastLyricsWidgetKey) return
         lastLyricsWidgetKey = key
         LyricsWidgetSnapshot.save(
             this,
             LyricsWidgetSnapshot(
                 mediaId = song.videoId,
-                title = song.title,
-                artist = song.artist,
-                previous = previous,
-                current = current,
-                next = next,
+                lines = window,
+                currentIndex = windowCurrent,
             ),
         )
         LyricsWidget.refresh(this)

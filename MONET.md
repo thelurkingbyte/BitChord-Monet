@@ -38,9 +38,9 @@ Without the secrets, only the debug APK is produced — fine for testing, not fo
 ## Status
 - [x] **Phase 0 — baseline:** toolchain installed (JDK 17, Android SDK 37), fork cloned, `upstream` wired, platform 37 installed + aliased.
 - [x] **Phase 1 — identity:** `monet` flavor (`app/build.gradle.kts`), keystore + `keystore.properties`, CI workflow.
-- [x] **Phase 2 — wallpaper:** `SET_WALLPAPER` permission + user-triggered "Set album art as wallpaper" (Home/Lock) from the song menu (`wallpaper/WallpaperArt.kt`).
+- [x] **Phase 2 — wallpaper:** `SET_WALLPAPER` permission + user-triggered "Set album art as wallpaper" (Home/Lock) from the song menu (`wallpaper/WallpaperArt.kt`). Composes a screen-sized wallpaper: the sleeve centred on the narrower axis over a blurred, darkened fill, set as the visible crop so the launcher doesn't crop to a corner.
 - [x] **Phase 3 — Monet toggle:** opt-in "Auto wallpaper" (Appearance settings) applies the current track's art as wallpaper on change — Android 13+ derives Monet from that wallpaper.
-- [x] **Phase 4 — lyrics widget:** `widget/LyricsWidget.kt` + snapshot + layout + manifest receiver; fed by `PlaybackService.publishLyricsWidget()` on lyric-line changes (line-level, prev/current/next).
+- [x] **Phase 4 — lyrics widgets:** two RemoteViews widgets, **5-line** and **7-line** (`widget/LyricsWidget5.kt`/`LyricsWidget7.kt`), no title/artist (the media widgets carry those); the current line is highlighted. Fed by `PlaybackService.publishLyricsWidget()` on lyric-line changes. The pill media widget now shares the same dark background.
 - [x] **Phase 5 — polish:** CI workflow + `MONET.md`/`AGENTS.md` (done).
 
 ## Next action

@@ -49,7 +49,7 @@ class MediaWidgetPill : AppWidgetProvider() {
     }
 
     override fun onDeleted(context: Context, ids: IntArray) {
-        for (id in ids) lastBody.remove(id)
+        // The disc is shared across instances; there is no per-id state to drop.
     }
 
     private fun renderAsync(context: Context, ids: IntArray) {
@@ -91,28 +91,22 @@ class MediaWidgetPill : AppWidgetProvider() {
             val key = snapshot.artworkUrl
             val resources = context.resources
             val discPx = resources.getDimensionPixelSize(R.dimen.widget_pill_art)
-            val heightPx = resources.getDimensionPixelSize(R.dimen.widget_pill_height)
             for (id in ids) {
-                val widthPx = widthPx(context, manager, id)
                 val cachedDisc = key?.let { MediaWidgetArt.peekCircle(it, discPx) }
-                val cachedBody = key?.let { MediaWidgetArt.peekPill(it, widthPx, heightPx) }
-                if (cachedDisc == null || cachedBody == null) {
+                if (cachedDisc == null) {
                     // With what this widget last drew, not with nothing: a
                     // RemoteViews replaces the whole tree. See MediaWidget.render.
-                    manager.push(id, views(context, snapshot, cachedDisc ?: lastDisc, cachedBody ?: lastBody[id]))
+                    manager.push(id, views(context, snapshot, lastDisc))
                 }
-                val drawn = withTimeoutOrNull(RENDER_TIMEOUT_MS) {
-                    val disc = cachedDisc ?: key?.let {
+                val disc = withTimeoutOrNull(RENDER_TIMEOUT_MS) {
+                    cachedDisc ?: key?.let {
                         MediaWidgetArt.circle(context, snapshot.artworkUrl, discPx, it)
                     }
-                    disc to (cachedBody ?: MediaWidgetArt.pill(context, snapshot.artworkUrl, widthPx, heightPx, key))
                 } ?: continue
-                val (disc, body) = drawn
                 // A track with no cover, or one that failed, shows the
                 // placeholder disc rather than the previous track's picture.
                 lastDisc = disc
-                lastBody[id] = body
-                manager.push(id, views(context, snapshot, disc, body))
+                manager.push(id, views(context, snapshot, disc))
             }
         }
 
@@ -136,16 +130,13 @@ class MediaWidgetPill : AppWidgetProvider() {
             context: Context,
             snapshot: MediaWidgetSnapshot,
             disc: Bitmap?,
-            body: Bitmap?,
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_media_pill)
             disc?.let { views.setImageViewBitmap(R.id.widget_art, it) }
-            body?.let {
-                views.setImageViewBitmap(R.id.widget_pill_bg, it)
-                // The translucent stand-in capsule would show through the
-                // body's own transparency and darken it unevenly.
-                views.setInt(R.id.widget_pill_bg, "setBackgroundResource", 0)
-            }
+            // The capsule's body is the shared dark card (@drawable/
+            // widget_pill_background), matching the lyrics widget. The old
+            // blurred-album body bitmap is gone so the two widget families read
+            // as one.
 
             views.setTextViewText(
                 R.id.widget_title,
@@ -247,9 +238,6 @@ class MediaWidgetPill : AppWidgetProvider() {
         /** The disc all instances currently show. @see render */
         @Volatile
         private var lastDisc: Bitmap? = null
-
-        /** The body each instance currently shows. @see render */
-        private val lastBody = ConcurrentHashMap<Int, Bitmap>()
 
         /** Four cells by the launcher's 70n − 30 arithmetic, for a host that hasn't said. */
         private const val FALLBACK_WIDTH_DP = 250

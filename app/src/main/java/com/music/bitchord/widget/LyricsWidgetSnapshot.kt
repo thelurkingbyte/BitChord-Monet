@@ -3,46 +3,44 @@ package com.music.bitchord.widget
 import android.content.Context
 
 /**
- * The last lyric state pushed to the home-screen lyrics widget.
+ * The last lyric window pushed to the home-screen lyrics widgets.
+ *
+ * [lines] is a small window of lines around the current one (up to seven), and
+ * [currentIndex] is the index of the current line within that window. Both the
+ * five-line and seven-line widgets render from this same snapshot; the five-line
+ * one takes a five-line slice centred on [currentIndex].
  *
  * Persisted for the same reason [MediaWidgetSnapshot] is: a widget outlives the
- * playback service, so its first update after a reboot — or a launcher redraw
- * with the app's process dead — has only this file to draw from.
+ * playback service, so its first update after a reboot has only this file to
+ * draw from.
  */
 internal data class LyricsWidgetSnapshot(
     val mediaId: String?,
-    val title: String,
-    val artist: String,
-    val previous: String?,
-    val current: String?,
-    val next: String?,
+    val lines: List<String>,
+    val currentIndex: Int,
 ) {
     val hasTrack: Boolean get() = mediaId != null
 
     companion object {
-        val EMPTY = LyricsWidgetSnapshot(null, "", "", null, null, null)
+        val EMPTY = LyricsWidgetSnapshot(null, emptyList(), -1)
 
         fun save(context: Context, snapshot: LyricsWidgetSnapshot) {
             prefs(context).edit()
                 .putString(KEY_MEDIA_ID, snapshot.mediaId)
-                .putString(KEY_TITLE, snapshot.title)
-                .putString(KEY_ARTIST, snapshot.artist)
-                .putString(KEY_PREVIOUS, snapshot.previous)
-                .putString(KEY_CURRENT, snapshot.current)
-                .putString(KEY_NEXT, snapshot.next)
+                .putString(KEY_LINES, snapshot.lines.joinToString("\n"))
+                .putInt(KEY_CURRENT, snapshot.currentIndex)
                 .apply()
         }
 
         fun load(context: Context): LyricsWidgetSnapshot {
             val prefs = prefs(context)
             val mediaId = prefs.getString(KEY_MEDIA_ID, null) ?: return EMPTY
+            val raw = prefs.getString(KEY_LINES, "").orEmpty()
+            val lines = if (raw.isEmpty()) emptyList() else raw.split("\n")
             return LyricsWidgetSnapshot(
                 mediaId = mediaId,
-                title = prefs.getString(KEY_TITLE, "").orEmpty(),
-                artist = prefs.getString(KEY_ARTIST, "").orEmpty(),
-                previous = prefs.getString(KEY_PREVIOUS, null),
-                current = prefs.getString(KEY_CURRENT, null),
-                next = prefs.getString(KEY_NEXT, null),
+                lines = lines,
+                currentIndex = prefs.getInt(KEY_CURRENT, -1),
             )
         }
 
@@ -50,10 +48,7 @@ internal data class LyricsWidgetSnapshot(
             context.getSharedPreferences("bitchord_lyrics_widget", Context.MODE_PRIVATE)
 
         private const val KEY_MEDIA_ID = "media_id"
-        private const val KEY_TITLE = "title"
-        private const val KEY_ARTIST = "artist"
-        private const val KEY_PREVIOUS = "previous"
-        private const val KEY_CURRENT = "current"
-        private const val KEY_NEXT = "next"
+        private const val KEY_LINES = "lines"
+        private const val KEY_CURRENT = "current_index"
     }
 }

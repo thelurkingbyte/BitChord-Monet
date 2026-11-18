@@ -3,8 +3,10 @@
     <string name="set_album_art_as_wallpaper">Set album art as wallpaper</string>
     <string name="wallpaper_set">Wallpaper set</string>
     <string name="wallpaper_failed">Couldn’t set wallpaper</string>
-    <string name="lyrics_widget_label">BitChord Lyrics</string>
-    <string name="lyrics_widget_description">Shows the current lyric line</string>
+    <string name="lyrics_widget_5_label">BitChord Lyrics (5 lines)</string>
+    <string name="lyrics_widget_5_description">Shows five lyric lines</string>
+    <string name="lyrics_widget_7_label">BitChord Lyrics (7 lines)</string>
+    <string name="lyrics_widget_7_description">Shows seven lyric lines</string>
     <string name="auto_wallpaper">Auto wallpaper</string>
     <string name="auto_wallpaper_subtitle">Set the current song’s artwork as the wallpaper</string>
     <string name="playback_channel_name">Now playing</string>
