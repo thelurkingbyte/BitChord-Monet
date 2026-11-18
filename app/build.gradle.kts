@@ -139,6 +139,18 @@ android {
             dimension = "env"
             // Matches defaultConfig — this is the package already shipped/installed.
         }
+        // BitChord-Monet: a self-maintained fork that coexists with the official
+        // app. Own applicationId + app label, signed with our own keystore, so
+        // successive Monet builds update each other without touching the official
+        // install. (applicationId can only be set per flavor, not per build type.)
+        create("monet") {
+            dimension = "env"
+            applicationId = "com.thelurkingbyte.bitchordmonet"
+            resValue("string", "app_name", "BitChord Monet")
+            // Distinguishes the mod from a clean upstream release in the in-app
+            // updater's version comparison (a "-suffix" is treated as older).
+            versionNameSuffix = "-monet"
+        }
     }
 
     signingConfigs {

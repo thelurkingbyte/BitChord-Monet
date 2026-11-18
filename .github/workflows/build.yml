@@ -1,0 +1,41 @@
+name: Build Monet APK
+
+on:
+  push:
+    branches: [main, monet-features]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: yes | sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+
+      # AGP 8.10.1 resolves compileSdk 37 to the hash "android-37", but the
+      # current SDK ships that platform as the minor-versioned "android-37.0".
+      # Alias it so the build finds it (SDK-side only; no repo change).
+      - name: Alias android-37 platform
+        run: |
+          cp -a "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          sed -i 's/AndroidVersion.ApiLevel=37.0/AndroidVersion.ApiLevel=37/' "$ANDROID_HOME/platforms/android-37/source.properties"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build monet debug
+        run: ./gradlew :app:assembleMonetDebug -Pbitchord.bundleWear=false --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BitChord-Monet-debug
+          path: app/build/outputs/apk/monet/debug/*.apk
+          if-no-files-found: error

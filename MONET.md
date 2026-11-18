@@ -1,0 +1,45 @@
+# BitChord-Monet — Progress Log
+
+Living status for this BitChord fork. **Update after every phase/commit** so any agent can resume.
+
+## Goal
+Add to BitChord: (1) a TTML lyrics home-screen widget, (2) album-art wallpaper (home/lock), (3) system Monet colors derived from the album art. Maintain a rebase-able fork (never re-patch APKs) with a stable identity + signing key for seamless self-updates.
+
+## Locked decisions
+- **Packaging:** new `monet` flavor → applicationId `com.thelurkingbyte.bitchordmonet`, label "BitChord Monet". Coexists with official (`com.music.bitchord`) and `dev` (`com.dev.bitchord`).
+- **Signing:** own keystore `~/.android/keys/bitchord-monet.jks` (alias `bitchord-monet`); passwords in gitignored `keystore.properties`. Debug = debug key; release = this key.
+- **Git:** `main` = clean upstream mirror (never commit features there); work on `monet-features`; remotes `origin` (fork) + `upstream` (kushagrasinghx/BitChord).
+- **Widget:** RemoteViews / AppWidgetProvider, matching the existing `app/.../widget/` package. No Glance.
+- **Lyrics:** reuse the existing engine (Apple/TTML via am-lyrics, multi-provider). Line-level sync v1.
+- **Wallpaper:** user-triggered `WallpaperManager` action (Home / Lock / Both). No auto-change.
+- **System Monet:** not set directly (no public API). Android 12/13+ derives it from the wallpaper set in feature 2.
+- **Out of scope:** watch / TV / backend. Build the phone with `-Pbitchord.bundleWear=false`.
+
+## Environment (this machine)
+- Ubuntu WSL2, 4 CPU, ~3.8 GB RAM + swap. Local builds are memory-tight — **prefer GitHub Actions**.
+- JDK 17: `/usr/lib/jvm/java-17-openjdk-amd64`.
+- Android SDK: `/home/user/Android/Sdk` (set in `local.properties`).
+- **Local-only, NOT committed:** `gradle.properties` heap lowered to `-Xmx2048m`, `org.gradle.workers.max=2`, `kotlin.daemon.jvmargs=-Xmx1024m` to avoid OOM. CI uses the committed values.
+- **SDK alias:** AGP 8.10.1 resolves `compileSdk 37` to hash `android-37`, but the SDK ships it as `android-37.0`. Local/CI fix: `cp -a $ANDROID_HOME/platforms/android-37.0 $ANDROID_HOME/platforms/android-37` and set `AndroidVersion.ApiLevel=37` in its `source.properties`. CI does this in a workflow step.
+
+## Build
+- Local (memory permitting): `./gradlew :app:assembleMonetDebug -Pbitchord.bundleWear=false`
+- CI: `.github/workflows/build.yml` builds the same on GitHub runners and uploads the `BitChord-Monet-debug` artifact.
+- Signed release: `./gradlew :app:assembleMonetRelease -Pbitchord.bundleWear=false` (requires `keystore.properties`).
+
+## Status
+- [x] **Phase 0 — baseline:** toolchain installed (JDK 17, Android SDK 37), fork cloned, `upstream` wired, platform 37 installed + aliased.
+- [x] **Phase 1 — identity:** `monet` flavor (`app/build.gradle.kts`), keystore + `keystore.properties`, CI workflow.
+- [ ] **Phase 2 — wallpaper:** `SET_WALLPAPER` permission + user-triggered "Set album art as wallpaper" (Home/Lock/Both).
+- [ ] **Phase 3 — Monet toggle:** Settings toggle to (re)apply current artwork as wallpaper.
+- [ ] **Phase 4 — lyrics widget:** RemoteViews widget reading existing lyric state; updates on line change.
+- [ ] **Phase 5 — polish:** docs/automation (CI + this file done).
+
+## Next action
+Phase 2: add `SET_WALLPAPER` to the manifest and a "Set album art as wallpaper" action (Home/Lock/Both) in the now-playing / song menu, reusing the existing Coil image loading.
+
+## Resume checklist
+1. `cd` to the repo and `git checkout monet-features`.
+2. Export `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` and `ANDROID_HOME=/home/user/Android/Sdk`.
+3. Build via CI (push) or locally with `./gradlew :app:assembleMonetDebug -Pbitchord.bundleWear=false`.
+4. Read this file's Status + Next action before doing anything.
