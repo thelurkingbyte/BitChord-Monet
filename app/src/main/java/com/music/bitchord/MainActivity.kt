@@ -152,6 +152,8 @@ import com.music.bitchord.data.model.EntityType
 import com.music.bitchord.data.model.SearchHistoryEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.music.bitchord.data.model.PLAYER_ART_PX
+import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.durationMillis
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
@@ -204,6 +206,7 @@ import com.music.bitchord.playback.QueueShuffle
 import com.music.bitchord.playback.QueueSource
 import com.music.bitchord.playback.cast.CastController
 import com.music.bitchord.data.model.QueueTier
+import com.music.bitchord.wallpaper.WallpaperArt
 import com.music.bitchord.playback.autoplayEnabledFor
 import com.music.bitchord.playback.autoplaySectionStart
 import com.music.bitchord.playback.beginRadioQueue
@@ -4609,6 +4612,21 @@ private fun BitChordApp(
                 // drops it for a local file via `isOffline`, this catches
                 // the rest.
                 onShare = share.takeIf { song.videoId.isNotBlank() },
+                // A song's sleeve as the device wallpaper. User-triggered, so
+                // it is fine that it reaches outside the app's own sandbox;
+                // the row closes the menu first and reports the outcome.
+                onSetWallpaper = {
+                    songActions = null
+                    val artwork = song.artworkAt(PLAYER_ART_PX)
+                    scope.launch {
+                        val ok = WallpaperArt.apply(context, artwork)
+                        Toast.makeText(
+                            context,
+                            if (ok) R.string.wallpaper_set else R.string.wallpaper_failed,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
                 onCopyLog = if (fromPlayer) {
                     {
                         songActions = null

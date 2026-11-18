@@ -165,6 +165,12 @@ fun SongActionsMenu(
     audioVersionMissing: Boolean = false,
     onShare: (() -> Unit)? = null,
     /**
+     * Sets this track's album artwork as the device wallpaper. Null hides the
+     * row. Kept off the account/local split on purpose — any track with a
+     * sleeve can be a wallpaper, whatever it is playing from.
+     */
+    onSetWallpaper: (() -> Unit)? = null,
+    /**
      * Copies what the app logged while starting this track. Null everywhere
      * except the player, where "this track" means something.
      */
@@ -342,6 +348,18 @@ fun SongActionsMenu(
             ActionRow(
                 icon = SfIcons.History,
                 label = stringResource(R.string.remove_from_history),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
+
+        // Artwork as wallpaper — its own group, about the sleeve rather than
+        // about where the track goes or which page it belongs to.
+        onSetWallpaper?.let {
+            if (startsGroup()) IosMenuSeparator()
+            ActionRow(
+                icon = SfIcons.Album,
+                label = stringResource(R.string.set_album_art_as_wallpaper),
                 accent = palette.accent,
                 onClick = it,
             )
