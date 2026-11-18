@@ -27,6 +27,14 @@ Add to BitChord: (1) a TTML lyrics home-screen widget, (2) album-art wallpaper (
 - CI: `.github/workflows/build.yml` builds the same on GitHub runners and uploads the `BitChord-Monet-debug` artifact.
 - Signed release: `./gradlew :app:assembleMonetRelease -Pbitchord.bundleWear=false` (requires `keystore.properties`).
 
+## Release signing (seamless updates)
+Debug APKs from CI are signed with an ephemeral per-run debug key, so one cannot update another (Android rejects the signature mismatch). For **seamless self-updates that keep app data**, build the release variant signed with your own stable key:
+1. Add these repository secrets (GitHub → Settings → Secrets and variables → Actions):
+   - `MONET_KEYSTORE_BASE64` — `base64 -w0 ~/.android/keys/bitchord-monet.jks`
+   - `MONET_STORE_PASSWORD`, `MONET_KEY_ALIAS`, `MONET_KEY_PASSWORD` — from `keystore.properties`
+2. The workflow then also builds a signed `BitChord-Monet-release` artifact. Install that once; every later release updates it in place and keeps its data.
+Without the secrets, only the debug APK is produced — fine for testing, not for seamless updates.
+
 ## Status
 - [x] **Phase 0 — baseline:** toolchain installed (JDK 17, Android SDK 37), fork cloned, `upstream` wired, platform 37 installed + aliased.
 - [x] **Phase 1 — identity:** `monet` flavor (`app/build.gradle.kts`), keystore + `keystore.properties`, CI workflow.
@@ -36,7 +44,7 @@ Add to BitChord: (1) a TTML lyrics home-screen widget, (2) album-art wallpaper (
 - [x] **Phase 5 — polish:** CI workflow + `MONET.md`/`AGENTS.md` (done).
 
 ## Next action
-Verify the Phase 2 + 3 + 4 build on GitHub Actions (the authoritative build; local builds OOM on this 3.8 GB WSL box). Once green, install the `monet` debug APK and test: song-menu "Set album art as wallpaper", the Appearance → "Auto wallpaper" toggle, and the home-screen lyrics widget.
+All three features build **green** on GitHub Actions (run on commit `4d0b44fa`). To install: download the `BitChord-Monet-debug` (or `-release`, once secrets are set) artifact from the Actions run and `adb install -r` it. Then test: song-menu "Set album art as wallpaper", Appearance → "Auto wallpaper", and the home-screen lyrics widget.
 
 ## Resume checklist
 1. `cd` to the repo and `git checkout monet-features`.

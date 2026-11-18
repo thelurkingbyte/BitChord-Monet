@@ -43,8 +43,34 @@ jobs:
       - name: Build monet debug
         run: ./gradlew :app:assembleMonetDebug -Pbitchord.bundleWear=false --stacktrace
 
+      # Seamless updates need a *stable* signing key: debug APKs are signed
+      # with an ephemeral per-run debug key, so one cannot update another. When
+      # the MONET_KEYSTORE_BASE64 secret is set, also build a release APK signed
+      # with it; successive release APKs then update each other and keep data.
+      - name: Build signed release
+        env:
+          KEYSTORE_BASE64: ${{ secrets.MONET_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.MONET_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.MONET_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.MONET_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "MONET_KEYSTORE_BASE64 not set; skipping release build."
+            exit 0
+          fi
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/monet.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/monet.jks"
+          ./gradlew :app:assembleMonetRelease -Pbitchord.bundleWear=false --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: BitChord-Monet-debug
           path: app/build/outputs/apk/monet/debug/*.apk
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BitChord-Monet-release
+          path: app/build/outputs/apk/monet/release/*.apk
+          if-no-files-found: ignore

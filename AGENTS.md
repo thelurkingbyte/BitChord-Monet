@@ -23,6 +23,9 @@ Always pass `-Pbitchord.bundleWear=false` (watch/TV bundling is out of scope for
 ```
 APK: `app/build/outputs/apk/monet/debug/*.apk` (or `monet/release`).
 
+## Seamless updates / release signing
+Debug APKs are signed with an ephemeral debug key (cannot update each other). For self-updates that keep data, add repo secrets `MONET_KEYSTORE_BASE64`, `MONET_STORE_PASSWORD`, `MONET_KEY_ALIAS`, `MONET_KEY_PASSWORD`; CI then also emits a signed `BitChord-Monet-release` artifact. See `MONET.md`.
+
 ## Variants
 | Flavor | applicationId            | Label           |
 |--------|--------------------------|-----------------|
