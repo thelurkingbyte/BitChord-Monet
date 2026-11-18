@@ -31,12 +31,12 @@ Add to BitChord: (1) a TTML lyrics home-screen widget, (2) album-art wallpaper (
 - [x] **Phase 0 — baseline:** toolchain installed (JDK 17, Android SDK 37), fork cloned, `upstream` wired, platform 37 installed + aliased.
 - [x] **Phase 1 — identity:** `monet` flavor (`app/build.gradle.kts`), keystore + `keystore.properties`, CI workflow.
 - [x] **Phase 2 — wallpaper:** `SET_WALLPAPER` permission + user-triggered "Set album art as wallpaper" (Home/Lock) from the song menu (`wallpaper/WallpaperArt.kt`).
-- [ ] **Phase 3 — Monet toggle:** optional; system Monet is derived by Android from the wallpaper set in Phase 2.
+- [x] **Phase 3 — Monet toggle:** opt-in "Auto wallpaper" (Appearance settings) applies the current track's art as wallpaper on change — Android 13+ derives Monet from that wallpaper.
 - [x] **Phase 4 — lyrics widget:** `widget/LyricsWidget.kt` + snapshot + layout + manifest receiver; fed by `PlaybackService.publishLyricsWidget()` on lyric-line changes (line-level, prev/current/next).
 - [x] **Phase 5 — polish:** CI workflow + `MONET.md`/`AGENTS.md` (done).
 
 ## Next action
-Verify the Phase 2 + Phase 4 build on GitHub Actions (the authoritative build; local builds OOM on this 3.8 GB WSL box). Then, if desired, add an opt-in "auto wallpaper on track change" toggle for dynamic Monet (Phase 3).
+Verify the Phase 2 + 3 + 4 build on GitHub Actions (the authoritative build; local builds OOM on this 3.8 GB WSL box). Once green, install the `monet` debug APK and test: song-menu "Set album art as wallpaper", the Appearance → "Auto wallpaper" toggle, and the home-screen lyrics widget.
 
 ## Resume checklist
 1. `cd` to the repo and `git checkout monet-features`.

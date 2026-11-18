@@ -231,6 +231,7 @@ fun SettingsScreen(
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
+    val autoWallpaper by AppSettings.autoWallpaper.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
@@ -1007,6 +1008,21 @@ fun SettingsScreen(
                     selectedIndex = ThemeMode.entries.indexOf(theme),
                     onSelect = { AppSettings.setThemeMode(ThemeMode.entries[it]) },
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
+            }
+            val autoWallpaperTitle = stringResource(R.string.auto_wallpaper)
+            row(autoWallpaperTitle, "wallpaper", "monet", "material you", "album art", "colour", "color") {
+                SettingsRow(
+                    icon = SfIcons.Album,
+                    title = autoWallpaperTitle,
+                    subtitle = stringResource(R.string.auto_wallpaper_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoWallpaper,
+                            onCheckedChange = AppSettings::setAutoWallpaper,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoWallpaper(!autoWallpaper) },
                 )
             }
             val fontTitle = stringResource(R.string.font)

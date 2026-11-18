@@ -498,6 +498,8 @@ object AppSettings {
 
     /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
     val liquidGlass = MutableStateFlow(false)
+    /** When on, the current track's album art becomes the wallpaper, which is what Android 13+ derives Monet colours from. */
+    val autoWallpaper = MutableStateFlow(false)
 
     /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
@@ -1044,6 +1046,7 @@ object AppSettings {
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
+        autoWallpaper.value = prefs.getBoolean(KEY_AUTO_WALLPAPER, false)
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
@@ -1516,6 +1519,11 @@ object AppSettings {
     fun setLiquidGlass(value: Boolean) {
         liquidGlass.value = value
         prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()
+    }
+
+    fun setAutoWallpaper(value: Boolean) {
+        autoWallpaper.value = value
+        prefs.edit().putBoolean(KEY_AUTO_WALLPAPER, value).apply()
     }
 
     fun setGlassPerformance(value: Boolean) {
@@ -2257,6 +2265,7 @@ object AppSettings {
     private const val KEY_SYNC_DOWNLOADED_PLAYLISTS = "sync_downloaded_playlists"
     private const val KEY_CROSSFADE = "crossfade_seconds"
     private const val KEY_SMART_FADE = "smart_fade_enabled"
+    private const val KEY_AUTO_WALLPAPER = "auto_wallpaper"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
     private const val KEY_SKIP_SILENCE = "skip_silence"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"

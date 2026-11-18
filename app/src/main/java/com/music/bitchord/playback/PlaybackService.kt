@@ -107,6 +107,7 @@ import com.music.bitchord.data.lyrics.EmbeddedLyrics
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsRepository
 import com.music.bitchord.data.model.NOTIFICATION_ART_PX
+import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.SearchResult
@@ -153,6 +154,7 @@ import com.music.bitchord.widget.LyricsWidget
 import com.music.bitchord.widget.LyricsWidgetSnapshot
 import com.music.bitchord.widget.MediaWidget
 import com.music.bitchord.widget.MediaWidgetSnapshot
+import com.music.bitchord.wallpaper.WallpaperArt
 import com.music.bitchord.wear.WearBridge
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -851,6 +853,8 @@ class PlaybackService : MediaLibraryService() {
     private var serviceLyricsFor: String? = null
     /** The last lyric state handed to the home-screen widget, to skip unchanged redraws. */
     private var lastLyricsWidgetKey: String? = null
+    /** Last track whose art was pushed as the wallpaper, so a re-entry doesn't re-apply it. */
+    private var lastAutoWallpaperFor: String? = null
     private var lastPublishedSubtitle: String? = null
     private var lyricsTickerJob: Job? = null
 
@@ -7934,6 +7938,8 @@ class PlaybackService : MediaLibraryService() {
             return
         }
 
+        maybeApplyAutoWallpaper(currentSong)
+
         if (!AppSettings.syncedLyrics.value) {
             serviceLyrics = null
             serviceLyricsFor = null
@@ -8031,6 +8037,21 @@ class PlaybackService : MediaLibraryService() {
         }
 
         publishLyricsWidget()
+    }
+
+    /**
+     * Opt-in: push the current track's sleeve as the device wallpaper. Android
+     * 13+ derives the system Monet palette from the wallpaper, so this is what
+     * makes the system colours follow the music.
+     */
+    private fun maybeApplyAutoWallpaper(song: Song) {
+        if (!AppSettings.autoWallpaper.value) return
+        if (lastAutoWallpaperFor == song.videoId) return
+        lastAutoWallpaperFor = song.videoId
+        val artwork = song.artworkAt(PLAYER_ART_PX)
+        scope.launch {
+            WallpaperArt.apply(this@PlaybackService, artwork)
+        }
     }
 
     /**
