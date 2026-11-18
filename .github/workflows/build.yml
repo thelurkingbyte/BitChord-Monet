@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -16,10 +19,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
+      # The runner image ships an Android SDK. Do NOT use
+      # android-actions/setup-android@v3 here: it tries to install the removed
+      # legacy "tools" package and fails with "Failed to find package 'tools'".
       - name: Install SDK packages
-        run: yes | sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)"; fi
+          echo "ANDROID_HOME=$ANDROID_HOME sdkmanager=$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          yes | "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
 
       # AGP 8.10.1 resolves compileSdk 37 to the hash "android-37", but the
       # current SDK ships that platform as the minor-versioned "android-37.0".
