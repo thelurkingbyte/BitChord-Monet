@@ -149,6 +149,8 @@ import com.music.bitchord.data.sources.StreamFormat
 import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.playback.smart.AutomixAnalysisSource
 import com.music.bitchord.playback.smart.VersionAudioAligner
+import com.music.bitchord.widget.LyricsWidget
+import com.music.bitchord.widget.LyricsWidgetSnapshot
 import com.music.bitchord.widget.MediaWidget
 import com.music.bitchord.widget.MediaWidgetSnapshot
 import com.music.bitchord.wear.WearBridge
@@ -845,6 +847,10 @@ class PlaybackService : MediaLibraryService() {
 
     private var serviceLyricsJob: Job? = null
     private var serviceLyrics: List<LyricLine>? = null
+    /** Which track [serviceLyrics] belongs to, so a new track never flashes the old one. */
+    private var serviceLyricsFor: String? = null
+    /** The last lyric state handed to the home-screen widget, to skip unchanged redraws. */
+    private var lastLyricsWidgetKey: String? = null
     private var lastPublishedSubtitle: String? = null
     private var lyricsTickerJob: Job? = null
 
@@ -7922,17 +7928,26 @@ class PlaybackService : MediaLibraryService() {
     private fun loadLyricsForCurrentTrack() {
         val currentSong = player?.currentMediaItem?.toSong() ?: run {
             serviceLyrics = null
+            serviceLyricsFor = null
             stopLyricsTicker()
+            publishLyricsWidget()
             return
         }
 
         if (!AppSettings.syncedLyrics.value) {
             serviceLyrics = null
+            serviceLyricsFor = null
             stopLyricsTicker()
+            publishLyricsWidget()
             return
         }
 
         val trackDurationMs = (player?.duration ?: 0L).takeIf { it > 0 } ?: 0L
+
+        // A new track: show its title and artist right away, and hold the old
+        // track's lines back (serviceLyricsFor no longer matches) until the new
+        // ones arrive.
+        publishLyricsWidget()
 
         serviceLyricsJob?.cancel()
         serviceLyricsJob = scope.launch(Dispatchers.IO) {
@@ -7956,9 +7971,11 @@ class PlaybackService : MediaLibraryService() {
             }
             withContext(Dispatchers.Main) {
                 serviceLyrics = lines
+                serviceLyricsFor = currentSong.videoId
                 if (player?.isPlaying == true) {
                     updateLyricSubtitle()
                 }
+                publishLyricsWidget()
             }
         }
     }
@@ -8012,6 +8029,47 @@ class PlaybackService : MediaLibraryService() {
                 .setSubtitle(subtitleText)
                 .build()
         }
+
+        publishLyricsWidget()
+    }
+
+    /**
+     * Hands the current lyric state to the home-screen lyrics widget, but only
+     * when it has actually changed — the ticker calls [updateLyricSubtitle]
+     * every 500 ms, and a widget redraw on every tick would be a battery bill
+     * for a picture that mostly hasn't moved.
+     */
+    private fun publishLyricsWidget() {
+        val song = player?.currentMediaItem?.toSong()
+        if (song == null) {
+            LyricsWidgetSnapshot.save(this, LyricsWidgetSnapshot.EMPTY)
+            lastLyricsWidgetKey = null
+            LyricsWidget.refresh(this)
+            return
+        }
+        // Only lines fetched for this track: a new track briefly has the old
+        // track's lines still in [serviceLyrics] until its own lookup returns.
+        val lines = if (serviceLyricsFor == song.videoId) serviceLyrics else null
+        val pos = crossfade?.loopPositionMs() ?: player?.currentPosition ?: 0L
+        val idx = lines?.indexOfLast { it.timeMs <= pos } ?: -1
+        val previous = if (idx >= 1) lines?.getOrNull(idx - 1)?.takeIf { !it.isGap }?.text else null
+        val current = if (idx >= 0) lines?.getOrNull(idx)?.takeIf { !it.isGap }?.text else null
+        val next = if (idx >= 0) lines?.getOrNull(idx + 1)?.takeIf { !it.isGap }?.text else null
+        val key = "${song.videoId}|${previous.orEmpty()}|${current.orEmpty()}|${next.orEmpty()}"
+        if (key == lastLyricsWidgetKey) return
+        lastLyricsWidgetKey = key
+        LyricsWidgetSnapshot.save(
+            this,
+            LyricsWidgetSnapshot(
+                mediaId = song.videoId,
+                title = song.title,
+                artist = song.artist,
+                previous = previous,
+                current = current,
+                next = next,
+            ),
+        )
+        LyricsWidget.refresh(this)
     }
 
     /**

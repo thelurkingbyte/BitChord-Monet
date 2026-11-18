@@ -721,6 +721,19 @@
                 android:resource="@xml/widget_media_pill" />
         </receiver>
 
+        <!-- Home-screen lyrics. Fed by PlaybackService on lyric-line changes. -->
+        <receiver
+            android:name=".widget.LyricsWidget"
+            android:exported="false"
+            android:label="@string/lyrics_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_lyrics" />
+        </receiver>
+
         <!-- The transport buttons. Reached only by this app's own PendingIntents. -->
         <receiver
             android:name=".widget.MediaWidgetActions"

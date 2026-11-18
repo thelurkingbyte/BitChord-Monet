@@ -30,13 +30,13 @@ Add to BitChord: (1) a TTML lyrics home-screen widget, (2) album-art wallpaper (
 ## Status
 - [x] **Phase 0 — baseline:** toolchain installed (JDK 17, Android SDK 37), fork cloned, `upstream` wired, platform 37 installed + aliased.
 - [x] **Phase 1 — identity:** `monet` flavor (`app/build.gradle.kts`), keystore + `keystore.properties`, CI workflow.
-- [ ] **Phase 2 — wallpaper:** `SET_WALLPAPER` permission + user-triggered "Set album art as wallpaper" (Home/Lock/Both).
-- [ ] **Phase 3 — Monet toggle:** Settings toggle to (re)apply current artwork as wallpaper.
-- [ ] **Phase 4 — lyrics widget:** RemoteViews widget reading existing lyric state; updates on line change.
-- [ ] **Phase 5 — polish:** docs/automation (CI + this file done).
+- [x] **Phase 2 — wallpaper:** `SET_WALLPAPER` permission + user-triggered "Set album art as wallpaper" (Home/Lock) from the song menu (`wallpaper/WallpaperArt.kt`).
+- [ ] **Phase 3 — Monet toggle:** optional; system Monet is derived by Android from the wallpaper set in Phase 2.
+- [x] **Phase 4 — lyrics widget:** `widget/LyricsWidget.kt` + snapshot + layout + manifest receiver; fed by `PlaybackService.publishLyricsWidget()` on lyric-line changes (line-level, prev/current/next).
+- [x] **Phase 5 — polish:** CI workflow + `MONET.md`/`AGENTS.md` (done).
 
 ## Next action
-Phase 2: add `SET_WALLPAPER` to the manifest and a "Set album art as wallpaper" action (Home/Lock/Both) in the now-playing / song menu, reusing the existing Coil image loading.
+Verify the Phase 2 + Phase 4 build on GitHub Actions (the authoritative build; local builds OOM on this 3.8 GB WSL box). Then, if desired, add an opt-in "auto wallpaper on track change" toggle for dynamic Monet (Phase 3).
 
 ## Resume checklist
 1. `cd` to the repo and `git checkout monet-features`.
