@@ -18,6 +18,8 @@ internal data class LyricsWidgetSnapshot(
     val mediaId: String?,
     val lines: List<String>,
     val currentIndex: Int,
+    /** How much of the current line is sung, 0..1, for the karaoke sweep. */
+    val currentProgress: Float = 0f,
 ) {
     val hasTrack: Boolean get() = mediaId != null
 
@@ -29,6 +31,7 @@ internal data class LyricsWidgetSnapshot(
                 .putString(KEY_MEDIA_ID, snapshot.mediaId)
                 .putString(KEY_LINES, snapshot.lines.joinToString("\n"))
                 .putInt(KEY_CURRENT, snapshot.currentIndex)
+                .putFloat(KEY_PROGRESS, snapshot.currentProgress)
                 .apply()
         }
 
@@ -41,6 +44,7 @@ internal data class LyricsWidgetSnapshot(
                 mediaId = mediaId,
                 lines = lines,
                 currentIndex = prefs.getInt(KEY_CURRENT, -1),
+                currentProgress = prefs.getFloat(KEY_PROGRESS, 0f),
             )
         }
 
@@ -50,5 +54,6 @@ internal data class LyricsWidgetSnapshot(
         private const val KEY_MEDIA_ID = "media_id"
         private const val KEY_LINES = "lines"
         private const val KEY_CURRENT = "current_index"
+        private const val KEY_PROGRESS = "current_progress"
     }
 }

@@ -232,6 +232,11 @@ fun SettingsScreen(
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val autoWallpaper by AppSettings.autoWallpaper.collectAsStateWithLifecycle()
+    val wallpaperStrategy by AppSettings.wallpaperStrategy.collectAsStateWithLifecycle()
+    val autoRestoreWallpaper by AppSettings.autoRestoreWallpaper.collectAsStateWithLifecycle()
+    val wallpaperStyle by AppSettings.wallpaperStyle.collectAsStateWithLifecycle()
+    val blurRadius by AppSettings.blurRadius.collectAsStateWithLifecycle()
+    val checkMonetReleases by AppSettings.checkMonetReleases.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
@@ -1023,6 +1028,76 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setAutoWallpaper(!autoWallpaper) },
+                )
+            }
+            val wallpaperStrategyTitle = stringResource(R.string.wallpaper_strategy)
+            row(wallpaperStrategyTitle, "wallpaper", "monet", "colour", "color", "seed") {
+                SettingsRow(icon = SfIcons.Album, title = wallpaperStrategyTitle)
+                SegmentedControl(
+                    options = listOf(
+                        stringResource(R.string.wallpaper_strategy_a),
+                        stringResource(R.string.wallpaper_strategy_b),
+                        stringResource(R.string.wallpaper_strategy_c),
+                    ),
+                    selectedIndex = wallpaperStrategy,
+                    onSelect = { AppSettings.setWallpaperStrategy(it) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
+            }
+            val autoRestoreTitle = stringResource(R.string.auto_restore_wallpaper)
+            row(autoRestoreTitle, "wallpaper", "restore", "pause", "reset") {
+                SettingsRow(
+                    icon = SfIcons.Album,
+                    title = autoRestoreTitle,
+                    subtitle = stringResource(R.string.auto_restore_wallpaper_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoRestoreWallpaper,
+                            onCheckedChange = AppSettings::setAutoRestoreWallpaper,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoRestoreWallpaper(!autoRestoreWallpaper) },
+                )
+            }
+            val wallpaperStyleTitle = stringResource(R.string.wallpaper_style)
+            row(wallpaperStyleTitle, "wallpaper", "blur", "cover", "sleeve") {
+                SettingsRow(icon = SfIcons.Album, title = wallpaperStyleTitle)
+                SegmentedControl(
+                    options = listOf(
+                        stringResource(R.string.wallpaper_style_sleeve),
+                        stringResource(R.string.wallpaper_style_blur),
+                    ),
+                    selectedIndex = wallpaperStyle,
+                    onSelect = { AppSettings.setWallpaperStyle(it) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
+            }
+            val blurRadiusTitle = stringResource(R.string.blur_radius)
+            row(blurRadiusTitle, "wallpaper", "blur", "radius", "strength") {
+                SliderRow(
+                    icon = SfIcons.Album,
+                    title = blurRadiusTitle,
+                    subtitle = if (blurRadius == 0) stringResource(R.string.off) else "$blurRadius",
+                    value = blurRadius.toString(),
+                    sliderValue = blurRadius.toFloat(),
+                    onSliderValue = { AppSettings.setBlurRadius(it.roundToInt()) },
+                    valueRange = 0f..50f,
+                    steps = 50,
+                )
+            }
+            val checkReleasesTitle = stringResource(R.string.check_monet_releases)
+            row(checkReleasesTitle, "update", "release", "monet", "github") {
+                SettingsRow(
+                    icon = SfIcons.Album,
+                    title = checkReleasesTitle,
+                    subtitle = stringResource(R.string.check_monet_releases_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = checkMonetReleases,
+                            onCheckedChange = AppSettings::setCheckMonetReleases,
+                        )
+                    },
+                    onClick = { AppSettings.setCheckMonetReleases(!checkMonetReleases) },
                 )
             }
             val fontTitle = stringResource(R.string.font)

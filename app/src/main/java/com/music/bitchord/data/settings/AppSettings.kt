@@ -502,6 +502,26 @@ object AppSettings {
     val autoWallpaper = MutableStateFlow(false)
 
     /**
+     * How the wallpaper (and so the system Monet palette) is applied:
+     * 0 = A: full art as wallpaper (reliable, weakest-device fallback)
+     * 1 = B: instant in-app palette (app theme only; system still wallpaper-derived)
+     * 2 = C: tiny dominant-colour seed first, then full art (fastest system re-derive; default)
+     */
+    val wallpaperStrategy = MutableStateFlow(2)
+
+    /** When on, the app restores the wallpaper it found on first run when playback pauses or ends. */
+    val autoRestoreWallpaper = MutableStateFlow(true)
+
+    /** Wallpaper composition: 0 = sharp sleeve on blurred fill (current); 1 = uniform blur over the whole cover. */
+    val wallpaperStyle = MutableStateFlow(0)
+
+    /** Blur radius for the wallpaper backdrop, 0–50; 0 disables the blur. */
+    val blurRadius = MutableStateFlow(10)
+
+    /** Optional: check BitChord-Monet GitHub Releases for updates (default off). */
+    val checkMonetReleases = MutableStateFlow(false)
+
+    /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
      * much for: the bar's rim, shadow, tint and motion all stay. A Liquid Glass
      * option, honoured only while [liquidGlass] is on.
@@ -1047,6 +1067,11 @@ object AppSettings {
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
         autoWallpaper.value = prefs.getBoolean(KEY_AUTO_WALLPAPER, false)
+        wallpaperStrategy.value = prefs.getInt(KEY_WALLPAPER_STRATEGY, 2)
+        autoRestoreWallpaper.value = prefs.getBoolean(KEY_AUTO_RESTORE_WALLPAPER, true)
+        wallpaperStyle.value = prefs.getInt(KEY_WALLPAPER_STYLE, 0)
+        blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 10)
+        checkMonetReleases.value = prefs.getBoolean(KEY_CHECK_MONET_RELEASES, false)
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
@@ -1524,6 +1549,31 @@ object AppSettings {
     fun setAutoWallpaper(value: Boolean) {
         autoWallpaper.value = value
         prefs.edit().putBoolean(KEY_AUTO_WALLPAPER, value).apply()
+    }
+
+    fun setWallpaperStrategy(value: Int) {
+        wallpaperStrategy.value = value
+        prefs.edit().putInt(KEY_WALLPAPER_STRATEGY, value).apply()
+    }
+
+    fun setAutoRestoreWallpaper(value: Boolean) {
+        autoRestoreWallpaper.value = value
+        prefs.edit().putBoolean(KEY_AUTO_RESTORE_WALLPAPER, value).apply()
+    }
+
+    fun setWallpaperStyle(value: Int) {
+        wallpaperStyle.value = value
+        prefs.edit().putInt(KEY_WALLPAPER_STYLE, value).apply()
+    }
+
+    fun setBlurRadius(value: Int) {
+        blurRadius.value = value
+        prefs.edit().putInt(KEY_BLUR_RADIUS, value).apply()
+    }
+
+    fun setCheckMonetReleases(value: Boolean) {
+        checkMonetReleases.value = value
+        prefs.edit().putBoolean(KEY_CHECK_MONET_RELEASES, value).apply()
     }
 
     fun setGlassPerformance(value: Boolean) {
@@ -2266,6 +2316,11 @@ object AppSettings {
     private const val KEY_CROSSFADE = "crossfade_seconds"
     private const val KEY_SMART_FADE = "smart_fade_enabled"
     private const val KEY_AUTO_WALLPAPER = "auto_wallpaper"
+    private const val KEY_WALLPAPER_STRATEGY = "wallpaper_strategy"
+    private const val KEY_AUTO_RESTORE_WALLPAPER = "auto_restore_wallpaper"
+    private const val KEY_WALLPAPER_STYLE = "wallpaper_style"
+    private const val KEY_BLUR_RADIUS = "blur_radius"
+    private const val KEY_CHECK_MONET_RELEASES = "check_monet_releases"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
     private const val KEY_SKIP_SILENCE = "skip_silence"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"

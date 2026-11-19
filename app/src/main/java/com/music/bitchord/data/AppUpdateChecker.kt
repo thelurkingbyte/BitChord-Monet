@@ -45,6 +45,10 @@ object AppUpdateChecker {
     private const val LATEST_RELEASE_URL =
         "https://api.github.com/repos/kushagrasinghx/BitChord/releases/latest"
 
+    /** BitChord-Monet's own releases (optional; see [checkMonet]). */
+    private fun monetReleaseUrl(): String =
+        "https://api.github.com/repos/${BuildConfig.MONET_UPDATER_REPO}/releases/latest"
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _available = MutableStateFlow<UpdateInfo?>(null)
@@ -65,16 +69,26 @@ object AppUpdateChecker {
     @Volatile
     private var downloadCancelled = false
 
-    suspend fun check() = withContext(Dispatchers.IO) {
+    /**
+     * The upstream check (unchanged). Only called for `dev`/`prod`, or when the
+     * user has not opted into the Monet-releases check. For the `monet` flavor
+     * this is disabled by default to avoid the signature-mismatch nag.
+     */
+    suspend fun check() = checkUrl(LATEST_RELEASE_URL, BuildConfig.UPDATE_APK_PREFIX)
+
+    /** Optional: check BitChord-Monet releases (default off; user opts in). */
+    suspend fun checkMonet() = checkUrl(monetReleaseUrl(), BuildConfig.MONET_UPDATER_PREFIX)
+
+    private suspend fun checkUrl(url: String, apkPrefix: String) = withContext(Dispatchers.IO) {
         runCatching {
-            val request = Request.Builder().url(LATEST_RELEASE_URL).build()
+            val request = Request.Builder().url(url).build()
             val body = Http.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) null else response.body?.string()
             } ?: return@runCatching
             val release = json.parseToJsonElement(body) as? JsonObject ?: return@runCatching
             val tag = release["tag_name"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val url = release["html_url"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
-            val apkUrl = apkAssetUrl(release)
+            val apkUrl = apkAssetUrl(release, apkPrefix)
             val notes = release["body"]?.jsonPrimitive?.contentOrNull
             val latest = tag.removePrefix("v")
             if (isNewer(latest, BuildConfig.VERSION_NAME)) {
@@ -108,13 +122,13 @@ object AppUpdateChecker {
      * [UpdateInfo.apkUrl] null and the UI falls back to opening the releases
      * page.
      */
-    private fun apkAssetUrl(release: JsonObject): String? = runCatching {
+    private fun apkAssetUrl(release: JsonObject, apkPrefix: String): String? = runCatching {
         val apks = release["assets"]?.jsonArray
             ?.mapNotNull { it as? JsonObject }
             ?.mapNotNull { asset ->
                 val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 val url = asset["browser_download_url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                val ours = name.startsWith(BuildConfig.UPDATE_APK_PREFIX, ignoreCase = true) &&
+                val ours = name.startsWith(apkPrefix, ignoreCase = true) &&
                     name.endsWith(".apk", ignoreCase = true) &&
                     asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
                 if (ours) name.removeSuffix(".apk").removeSuffix(".APK") to url else null

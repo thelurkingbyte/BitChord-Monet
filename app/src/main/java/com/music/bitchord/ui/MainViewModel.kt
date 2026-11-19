@@ -39,6 +39,7 @@ import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsRepository
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.BuildConfig
 import com.music.bitchord.ui.navigation.AppNavigator
 import com.music.bitchord.data.innertube.Innertube
 import com.music.bitchord.data.innertube.PlaybackTracker
@@ -1513,7 +1514,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // A leftover APK only means "Install Now" for the session that
             // downloaded it — see AppUpdateChecker.clearCache.
             AppUpdateChecker.clearCache(getApplication())
-            AppUpdateChecker.check()
+            // Upstream check: only for dev/prod. The monet flavor opts into its
+            // own releases check instead, and only when the user enables it —
+            // this avoids the signature-mismatch nag against upstream.
+            if (BuildConfig.FLAVOR != "monet") {
+                AppUpdateChecker.check()
+            } else if (AppSettings.checkMonetReleases.value) {
+                AppUpdateChecker.checkMonet()
+            }
         }
     }
 

@@ -44,7 +44,13 @@ Without the secrets, only the debug APK is produced — fine for testing, not fo
 - [x] **Phase 5 — polish:** CI workflow + `MONET.md`/`AGENTS.md` (done).
 
 ## Next action
-All three features build **green** on GitHub Actions (run on commit `4d0b44fa`). To install: download the `BitChord-Monet-debug` (or `-release`, once secrets are set) artifact from the Actions run and `adb install -r` it. Then test: song-menu "Set album art as wallpaper", Appearance → "Auto wallpaper", and the home-screen lyrics widget.
+v2 refinements implemented (pending CI green):
+- **Wallpaper color strategy** (A/B/C) + **auto-restore** + **style** (sleeve/blur-cover) + **blur radius** in Settings → Appearance.
+- **Karaoke sweep** in the lyrics widgets (current line rendered as bitmap with sung portion in accent).
+- **Updater**: upstream check disabled for `monet`; optional "Check for updates" (BitChord-Monet releases) default off.
+- **CI**: `[release]` in the commit message publishes a signed GitHub Release (tag `monet-v<shortsha>`) for Obtainium.
+
+Next: push, verify CI green, then install the signed release via Obtainium and validate each setting.
 
 ## Resume checklist
 1. `cd` to the repo and `git checkout monet-features`.

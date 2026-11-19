@@ -101,6 +101,10 @@ android {
         // the same GitHub release, told apart by file name. See
         // AppUpdateChecker.apkAssetUrl.
         buildConfigField("String", "UPDATE_APK_PREFIX", "\"BitChord-\"")
+        // BitChord-Monet: optional updater points at our own releases, not upstream.
+        // Empty for dev/prod so the upstream check keeps working there.
+        buildConfigField("String", "MONET_UPDATER_REPO", "\"thelurkingbyte/BitChord-Monet\"")
+        buildConfigField("String", "MONET_UPDATER_PREFIX", "\"BitChord-Monet-\"")
     }
 
     splits {

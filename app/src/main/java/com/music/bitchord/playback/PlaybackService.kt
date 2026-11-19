@@ -943,6 +943,11 @@ class PlaybackService : MediaLibraryService() {
             } else {
                 clearDiscordPresence()
                 stopLyricsTicker()
+                // Auto-restore: put back the wallpaper the app found on first run.
+                if (AppSettings.autoRestoreWallpaper.value) {
+                    lastAutoWallpaperFor = null
+                    scope.launch { WallpaperArt.restoreOriginal(this@PlaybackService) }
+                }
             }
         }
 
@@ -1293,6 +1298,12 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Auto-restore: snapshot the wallpaper the app found on first run so it
+        // can be put back on pause/ended. Only if we haven't saved one yet.
+        if (AppSettings.autoRestoreWallpaper.value && !java.io.File(filesDir, "original_wallpaper.png").exists()) {
+            scope.launch(Dispatchers.IO) { WallpaperArt.snapshotOriginal(this@PlaybackService) }
+        }
 
         if (com.music.bitchord.data.innertube.Innertube.cookie == null) {
             com.music.bitchord.data.innertube.Innertube.cookie = com.music.bitchord.auth.AuthStore(this).cookie
@@ -8085,7 +8096,25 @@ class PlaybackService : MediaLibraryService() {
         val end = minOf(start + windowSize, all.size)
         val window = if (idx >= 0) all.subList(start, end) else emptyList()
         val windowCurrent = if (idx >= 0) idx - start else -1
-        val key = "${song.videoId}|$idx|" + window.joinToString("\u0001")
+        // Karaoke sweep: how much of the current line is sung, 0..1. Word-timed
+        // lines use revealedChars; line-only lines use (pos - timeMs)/(next - timeMs).
+        val progress = if (idx >= 0) {
+            val line = lines?.getOrNull(idx)
+            when {
+                line == null -> 0f
+                line.words.isNotEmpty() -> line.revealedChars(pos) / line.text.length.coerceAtLeast(1)
+                else -> {
+                    val nextStart = lines.getOrNull(idx + 1)?.timeMs ?: line.timeMs + 4_000L
+                    ((pos - line.timeMs).toFloat() / (nextStart - line.timeMs).coerceAtLeast(1L))
+                }
+            }.coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        // Include the progress bucket in the key so the widget redraws a few
+        // times per second while the line is being sung (not every 500ms tick).
+        val progressBucket = (progress * 4).toInt()
+        val key = "${song.videoId}|$idx|$progressBucket|" + window.joinToString("\u0001")
         if (key == lastLyricsWidgetKey) return
         lastLyricsWidgetKey = key
         LyricsWidgetSnapshot.save(
@@ -8094,6 +8123,7 @@ class PlaybackService : MediaLibraryService() {
                 mediaId = song.videoId,
                 lines = window,
                 currentIndex = windowCurrent,
+                currentProgress = progress,
             ),
         )
         LyricsWidget.refresh(this)
