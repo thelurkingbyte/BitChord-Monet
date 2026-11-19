@@ -19,7 +19,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlin.math.ceil
 
 /**
  * The home-screen lyrics widgets: a window of lyric lines with the current one
@@ -91,6 +90,9 @@ abstract class LyricsWidget : AppWidgetProvider() {
             val currentSp = if (lineCount == 7) CURRENT_SP_7 else CURRENT_SP_5
             val otherSp = if (lineCount == 7) OTHER_SP_7 else OTHER_SP_5
             val density = context.resources.displayMetrics.density
+            // Render the current line at the row width so the ImageView never
+            // downscales (which made the active line look smaller than inactive).
+            val rowWidthPx = context.resources.displayMetrics.widthPixels - (20 * density).toInt()
             for (id in ids) {
                 val views = RemoteViews(context.packageName, layout)
                 for (i in 0 until lineCount) {
@@ -106,6 +108,7 @@ abstract class LyricsWidget : AppWidgetProvider() {
                                 progress = snapshot.currentProgress,
                                 textSizeSp = currentSp,
                                 density = density,
+                                maxWidthPx = rowWidthPx,
                             )
                             if (bmp != null) {
                                 views.setImageViewBitmap(imgId, bmp)
@@ -146,6 +149,7 @@ abstract class LyricsWidget : AppWidgetProvider() {
             progress: Float,
             textSizeSp: Float,
             density: Float,
+            maxWidthPx: Int,
         ): Bitmap? {
             if (text.isBlank()) return null
             val textSizePx = textSizeSp * density
@@ -153,8 +157,9 @@ abstract class LyricsWidget : AppWidgetProvider() {
                 textSize = textSizePx
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             }
-            val fullWidth = paint.measureText(text)
-            val widthPx = ceil(fullWidth).toInt().coerceAtLeast(1) + 4
+            // Render at the row width so the ImageView never downscales; the
+            // text is drawn left-aligned and clipped to the width.
+            val widthPx = maxWidthPx.coerceAtLeast(1)
             val heightPx = (textSizePx * 1.4).toInt().coerceAtLeast(1)
             val bmp = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)

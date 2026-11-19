@@ -940,6 +940,8 @@ class PlaybackService : MediaLibraryService() {
             if (isPlaying) {
                 pushDiscordPresence(exoPlayer)
                 startLyricsTicker()
+                // Re-apply the wallpaper on play/resume (it was restored on pause).
+                exoPlayer.currentMediaItem?.toSong()?.let { maybeApplyAutoWallpaper(it) }
             } else {
                 clearDiscordPresence()
                 stopLyricsTicker()

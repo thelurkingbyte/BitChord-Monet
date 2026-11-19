@@ -11,8 +11,8 @@
     <string name="auto_wallpaper_subtitle">Set the current song’s artwork as the wallpaper</string>
     <string name="wallpaper_strategy">Wallpaper color strategy</string>
     <string name="wallpaper_strategy_a">A · Wallpaper</string>
-    <string name="wallpaper_strategy_b">B · In-app</string>
-    <string name="wallpaper_strategy_c">C · Seed</string>
+    <string name="wallpaper_strategy_b">B · Seed</string>
+    <string name="wallpaper_strategy_c">C · Root</string>
     <string name="auto_restore_wallpaper">Auto-restore wallpaper</string>
     <string name="auto_restore_wallpaper_subtitle">Put back your wallpaper when playback pauses or ends</string>
     <string name="wallpaper_style">Wallpaper style</string>

@@ -504,10 +504,10 @@ object AppSettings {
     /**
      * How the wallpaper (and so the system Monet palette) is applied:
      * 0 = A: full art as wallpaper (reliable, weakest-device fallback)
-     * 1 = B: instant in-app palette (app theme only; system still wallpaper-derived)
-     * 2 = C: tiny dominant-colour seed first, then full art (fastest system re-derive; default)
+     * 1 = B: dominant-colour seed first, delay, then full art (fast system re-derive; default)
+     * 2 = C: root method (best-effort `su`; falls back to B if unavailable)
      */
-    val wallpaperStrategy = MutableStateFlow(2)
+    val wallpaperStrategy = MutableStateFlow(1)
 
     /** When on, the app restores the wallpaper it found on first run when playback pauses or ends. */
     val autoRestoreWallpaper = MutableStateFlow(true)
@@ -515,8 +515,8 @@ object AppSettings {
     /** Wallpaper composition: 0 = sharp sleeve on blurred fill (current); 1 = uniform blur over the whole cover. */
     val wallpaperStyle = MutableStateFlow(0)
 
-    /** Blur radius for the wallpaper backdrop, 0–50; 0 disables the blur. */
-    val blurRadius = MutableStateFlow(10)
+    /** Blur radius for the wallpaper backdrop, 0–10; 0 disables the blur. */
+    val blurRadius = MutableStateFlow(2)
 
     /** Optional: check BitChord-Monet GitHub Releases for updates (default off). */
     val checkMonetReleases = MutableStateFlow(false)
@@ -1067,10 +1067,10 @@ object AppSettings {
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
         autoWallpaper.value = prefs.getBoolean(KEY_AUTO_WALLPAPER, false)
-        wallpaperStrategy.value = prefs.getInt(KEY_WALLPAPER_STRATEGY, 2)
+        wallpaperStrategy.value = prefs.getInt(KEY_WALLPAPER_STRATEGY, 1)
         autoRestoreWallpaper.value = prefs.getBoolean(KEY_AUTO_RESTORE_WALLPAPER, true)
         wallpaperStyle.value = prefs.getInt(KEY_WALLPAPER_STYLE, 0)
-        blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 10)
+        blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 2)
         checkMonetReleases.value = prefs.getBoolean(KEY_CHECK_MONET_RELEASES, false)
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)

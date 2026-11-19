@@ -1081,8 +1081,8 @@ fun SettingsScreen(
                     value = blurRadius.toString(),
                     sliderValue = blurRadius.toFloat(),
                     onSliderValue = { AppSettings.setBlurRadius(it.roundToInt()) },
-                    valueRange = 0f..50f,
-                    steps = 50,
+                    valueRange = 0f..10f,
+                    steps = 10,
                 )
             }
             val checkReleasesTitle = stringResource(R.string.check_monet_releases)

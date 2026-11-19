@@ -20,8 +20,15 @@ import coil3.toBitmap
 import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.settings.AppSettings
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.min
 
@@ -30,23 +37,28 @@ import kotlin.math.min
  *
  * Three strategies (see [AppSettings.wallpaperStrategy]):
  *   A — full art as wallpaper (reliable fallback).
- *   B — instant in-app palette (app theme only; system still wallpaper-derived).
- *   C — tiny dominant-colour seed first, then full art (fastest system re-derive; default).
+ *   B — dominant-colour seed first, delay ~350 ms, then full art (fast system re-derive; default).
+ *   C — root method (best-effort `su`; falls back to B if unavailable).
  *
  * Two styles (see [AppSettings.wallpaperStyle]):
  *   0 — sharp sleeve on a blurred fill, centred on the narrower axis (current).
  *   1 — uniform blur over the whole cover, centred (the middle of the image shows).
  *
- * The blur radius (see [AppSettings.blurRadius], 0–50, default 10) applies to both.
+ * The blur radius (see [AppSettings.blurRadius], 0–10, default 2) applies to both.
  *
- * [snapshotOriginal] / [restoreOriginal] back the "restore wallpaper on pause" feature:
- * the current wallpaper is saved once (where readable) and re-applied on pause/ended.
+ * [snapshotOriginal] / [restoreOriginal] back the "restore wallpaper on pause" feature.
  */
 object WallpaperArt {
 
+    /** Single-thread dispatcher so wallpaper work can't starve playback. */
+    private val wallpaperDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "wallpaper").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+    private val scope = CoroutineScope(SupervisorJob() + wallpaperDispatcher)
+
     /** Applies [artworkUrl] to the home and lock screen. True if either took. */
     suspend fun apply(context: Context, artworkUrl: String?): Boolean =
-        withContext(Dispatchers.IO) {
+        withContext(wallpaperDispatcher) {
             if (artworkUrl.isNullOrBlank()) return@withContext false
             val art = load(context, artworkUrl) ?: return@withContext false
             val manager = WallpaperManager.getInstance(context)
@@ -54,28 +66,46 @@ object WallpaperArt {
             val style = AppSettings.wallpaperStyle.value
             val blurRadius = AppSettings.blurRadius.value
 
-            // Strategy B is app-level only; the app theme is already artwork-driven,
-            // so just re-publish the palette by returning success (system colors follow
-            // the wallpaper set by A/C if autoWallpaper is on). Still set the wallpaper
-            // so the system has something to derive from.
-            if (strategy == 0) {
-                // A: full art, with optional verification/retry.
-                return@withContext setWithVerify(context, manager, compose(context, art, style, blurRadius))
+            // Strategy C: root method (best-effort). Falls back to B if root unavailable.
+            if (strategy == 2 && tryRootWallpaper(context, art)) {
+                return@withContext true
             }
 
-            if (strategy == 2) {
-                // C: seed the dominant colour first, then the full art. The seed
-                // guarantees Android sees a change and re-derives Monet immediately.
+            // Strategy B (and C fallback): seed the dominant colour, wait for the
+            // system to sample it, then set the full art.
+            if (strategy == 1 || strategy == 2) {
+                val seed = seedBitmap(art)
                 runCatching {
-                    val seed = seedBitmap(art)
                     manager.setBitmap(seed, Rect(0, 0, seed.width, seed.height), true, WallpaperManager.FLAG_SYSTEM)
                     manager.setBitmap(seed, Rect(0, 0, seed.width, seed.height), true, WallpaperManager.FLAG_LOCK)
                 }
+                // Let the wallpaper analyzer sample the seed before overwriting.
+                delay(350L)
             }
 
-            // A/C both end with the full art.
+            // A/B/C all end with the full art.
             setWithVerify(context, manager, compose(context, art, style, blurRadius))
         }
+
+    /**
+     * Best-effort root method: set the wallpaper via `su -c`. Returns true only
+     * if the command succeeded. On non-rooted devices this fails and the caller
+     * falls back to strategy B.
+     */
+    private fun tryRootWallpaper(context: Context, art: Bitmap): Boolean {
+        return runCatching {
+            val file = java.io.File(context.cacheDir, "wallpaper_root.png").apply {
+                outputStream().use { art.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }
+            val cmd = "su -c 'cmd wallpaper /data/local/tmp/wallpaper_root.png 2>/dev/null || " +
+                "wallpaper /data/local/tmp/wallpaper_root.png 2>/dev/null'"
+            // Copy to world-readable tmp, then set as root.
+            Runtime.getRuntime().exec("su -c 'cp ${file.absolutePath} /data/local/tmp/wallpaper_root.png && chmod 644 /data/local/tmp/wallpaper_root.png'").waitFor()
+            val proc = Runtime.getRuntime().exec("su -c 'cmd wallpaper /data/local/tmp/wallpaper_root.png'")
+            proc.waitFor()
+            proc.exitValue() == 0
+        }.getOrDefault(false)
+    }
 
     /** Sets the wallpaper with a short verification: re-set once if colors didn't change (API 27+). */
     private fun setWithVerify(context: Context, manager: WallpaperManager, wallpaper: Bitmap): Boolean {
@@ -92,9 +122,7 @@ object WallpaperArt {
         }
         if (!system && !lock) return false
 
-        // Strategy A can no-op if the bitmap is considered unchanged; re-set once
-        // after a beat so the system re-derives. (Best-effort; not all OEMs expose
-        // getWallpaperColors, so this is a cheap nudge rather than a guarantee.)
+        // Best-effort: if colors didn't change, re-set once after a beat.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             runCatching {
                 val before = manager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
@@ -157,7 +185,7 @@ object WallpaperArt {
         return output
     }
 
-    /** A 2×2 bitmap of the artwork's dominant colour, for the strategy-C seed. */
+    /** A 2×2 bitmap of the artwork's dominant colour, for the strategy-B seed. */
     private fun seedBitmap(art: Bitmap): Bitmap {
         val palette = Palette.from(art).clearFilters().generate()
         val rgb = palette.getDominantColor(0xFF141619.toInt())
@@ -166,54 +194,53 @@ object WallpaperArt {
         return seed
     }
 
+    /** O(n) two-pass sliding-window box blur. Radius 0–10; 0 returns src unchanged. */
     private fun blur(src: Bitmap, radius: Int): Bitmap {
         if (radius <= 0) return src
-        val w = (src.width / 8).coerceAtLeast(1)
-        val h = (src.height / 8).coerceAtLeast(1)
-        val small = Bitmap.createScaledBitmap(src, w, h, true)
-        val blurred = boxBlur(small, radius.coerceAtMost(24))
-        return Bitmap.createScaledBitmap(blurred, src.width, src.height, true)
-    }
-
-    private fun boxBlur(src: Bitmap, radius: Int): Bitmap {
         val w = src.width
         val h = src.height
         val pixels = IntArray(w * h)
         src.getPixels(pixels, 0, w, 0, 0, w, h)
         val temp = IntArray(w * h)
-        val r = radius.coerceAtLeast(1)
+        val r = radius.coerceIn(1, 10)
+        // Horizontal pass.
         for (y in 0 until h) {
             val row = y * w
+            var a = 0; var rr = 0; var gg = 0; var bb = 0
+            for (x in -r..r) {
+                val xx = x.coerceIn(0, w - 1)
+                val p = pixels[row + xx]
+                a += (p ushr 24) and 0xFF; rr += (p ushr 16) and 0xFF
+                gg += (p ushr 8) and 0xFF; bb += p and 0xFF
+            }
+            val win = 2 * r + 1
             for (x in 0 until w) {
-                var a = 0; var rr = 0; var gg = 0; var bb = 0; var n = 0
-                val from = maxOf(0, x - r)
-                val to = minOf(w - 1, x + r)
-                for (xx in from..to) {
-                    val p = pixels[row + xx]
-                    a += (p ushr 24) and 0xFF
-                    rr += (p ushr 16) and 0xFF
-                    gg += (p ushr 8) and 0xFF
-                    bb += p and 0xFF
-                    n++
-                }
-                temp[row + x] = ((a / n) shl 24) or ((rr / n) shl 16) or ((gg / n) shl 8) or (bb / n)
+                temp[row + x] = ((a / win) shl 24) or ((rr / win) shl 16) or ((gg / win) shl 8) or (bb / win)
+                val out = (x - r).coerceIn(0, w - 1)
+                val inn = (x + r + 1).coerceIn(0, w - 1)
+                val po = pixels[row + out]; val pi = pixels[row + inn]
+                a += (pi ushr 24) and 0xFF; rr += (pi ushr 16) and 0xFF; gg += (pi ushr 8) and 0xFF; bb += pi and 0xFF
+                a -= (po ushr 24) and 0xFF; rr -= (po ushr 16) and 0xFF; gg -= (po ushr 8) and 0xFF; bb -= po and 0xFF
             }
         }
+        // Vertical pass.
         val out = IntArray(w * h)
         for (x in 0 until w) {
+            var a = 0; var rr = 0; var gg = 0; var bb = 0
+            for (y in -r..r) {
+                val yy = y.coerceIn(0, h - 1)
+                val p = temp[yy * w + x]
+                a += (p ushr 24) and 0xFF; rr += (p ushr 16) and 0xFF
+                gg += (p ushr 8) and 0xFF; bb += p and 0xFF
+            }
+            val win = 2 * r + 1
             for (y in 0 until h) {
-                var a = 0; var rr = 0; var gg = 0; var bb = 0; var n = 0
-                val from = maxOf(0, y - r)
-                val to = minOf(h - 1, y + r)
-                for (yy in from..to) {
-                    val p = temp[yy * w + x]
-                    a += (p ushr 24) and 0xFF
-                    rr += (p ushr 16) and 0xFF
-                    gg += (p ushr 8) and 0xFF
-                    bb += p and 0xFF
-                    n++
-                }
-                out[y * w + x] = ((a / n) shl 24) or ((rr / n) shl 16) or ((gg / n) shl 8) or (bb / n)
+                out[y * w + x] = ((a / win) shl 24) or ((rr / win) shl 16) or ((gg / win) shl 8) or (bb / win)
+                val outI = (y - r).coerceIn(0, h - 1)
+                val inI = (y + r + 1).coerceIn(0, h - 1)
+                val po = temp[outI * w + x]; val pi = temp[inI * w + x]
+                a += (pi ushr 24) and 0xFF; rr += (pi ushr 16) and 0xFF; gg += (pi ushr 8) and 0xFF; bb += pi and 0xFF
+                a -= (po ushr 24) and 0xFF; rr -= (po ushr 16) and 0xFF; gg -= (po ushr 8) and 0xFF; bb -= po and 0xFF
             }
         }
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -247,11 +274,11 @@ object WallpaperArt {
 
     /**
      * Saves the current wallpaper once (where readable) so it can be restored on
-     * pause/ended. Best-effort: on OEMs that block [WallpaperManager.getBitmap]
-     * this is a no-op and [restoreOriginal] falls back to a neutral default.
+     * pause/ended. Best-effort: on OEMs that block reading this is a no-op and
+     * [restoreOriginal] falls back to a neutral default.
      */
     fun snapshotOriginal(context: Context): Boolean = runCatching {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
         val manager = WallpaperManager.getInstance(context)
         val pfd = manager.getWallpaperFile(WallpaperManager.FLAG_SYSTEM) ?: return false
         pfd.use {
