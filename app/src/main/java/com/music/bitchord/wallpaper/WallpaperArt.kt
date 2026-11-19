@@ -208,8 +208,8 @@ object WallpaperArt {
                 for (yy in from..to) {
                     val p = temp[yy * w + x]
                     a += (p ushr 24) and 0xFF
-                    rr += (p usr 16) and 0xFF
-                    gg += (p usr 8) and 0xFF
+                    rr += (p ushr 16) and 0xFF
+                    gg += (p ushr 8) and 0xFF
                     bb += p and 0xFF
                     n++
                 }
@@ -251,11 +251,19 @@ object WallpaperArt {
      * this is a no-op and [restoreOriginal] falls back to a neutral default.
      */
     fun snapshotOriginal(context: Context): Boolean = runCatching {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return false
         val manager = WallpaperManager.getInstance(context)
-        val bmp = manager.getBitmap() ?: return false
-        val file = java.io.File(context.filesDir, "original_wallpaper.png")
-        file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        true
+        val pfd = manager.getWallpaperFile(WallpaperManager.FLAG_SYSTEM) ?: return false
+        pfd.use {
+            android.graphics.BitmapFactory.decodeStream(
+                android.os.ParcelFileDescriptor.AutoCloseInputStream(it),
+            )
+        }?.let { bmp ->
+            val file = java.io.File(context.filesDir, "original_wallpaper.png")
+            file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            return true
+        }
+        false
     }.getOrDefault(false)
 
     /** Re-applies the saved original wallpaper (or a neutral default if none was saved). */
