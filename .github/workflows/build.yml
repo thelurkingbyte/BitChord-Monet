@@ -85,7 +85,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${GITHUB_SHA::7}"
-          TAG="monet-v${VERSION}"
+          # Prefer the real version code so Obtainium can order updates; fall
+          # back to the short SHA if the build didn't stamp one.
+          VC=$(grep -oE 'bitchordVersionCode"\] = [0-9]+' build.gradle.kts 2>/dev/null | grep -oE '[0-9]+' | head -1)
+          TAG="monet-v${VC:-$VERSION}"
           APK=$(ls app/build/outputs/apk/monet/release/*universal*.apk 2>/dev/null | head -1)
           if [ -z "$APK" ]; then
             APK=$(ls app/build/outputs/apk/monet/release/*.apk 2>/dev/null | head -1)
@@ -97,4 +100,4 @@ jobs:
           gh release create "$TAG" \
             --title "BitChord-Monet $TAG" \
             --notes "Signed BitChord-Monet build. Install over the previous release; data is preserved." \
-            "$APK"
+            "$APK" 2>&1 || echo "release may already exist; skipping"
