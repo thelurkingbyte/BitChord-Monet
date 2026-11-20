@@ -63,7 +63,6 @@ object WallpaperArt {
             val art = load(context, artworkUrl) ?: return@withContext false
             val manager = WallpaperManager.getInstance(context)
             val strategy = AppSettings.wallpaperStrategy.value
-            val style = AppSettings.wallpaperStyle.value
             val blurRadius = AppSettings.blurRadius.value
 
             // Strategy C: root method (best-effort). Falls back to B if root unavailable.
@@ -84,7 +83,7 @@ object WallpaperArt {
             }
 
             // A/B/C all end with the full art.
-            setWithVerify(context, manager, compose(context, art, style, blurRadius))
+            setWithVerify(context, manager, compose(context, art, blurRadius))
         }
 
     /**
@@ -140,25 +139,12 @@ object WallpaperArt {
         return system || lock
     }
 
-    private fun compose(context: Context, art: Bitmap, style: Int, blurRadius: Int): Bitmap {
+    private fun compose(context: Context, art: Bitmap, blurRadius: Int): Bitmap {
         val (width, height) = screenSize(context)
         val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
 
-        if (style == 1) {
-            // Mode 2: uniform blur over the whole cover, centred (middle of image shows).
-            val coverScale = maxOf(width.toFloat() / art.width, height.toFloat() / art.height)
-            val coverW = (art.width * coverScale).toInt().coerceAtLeast(width)
-            val coverH = (art.height * coverScale).toInt().coerceAtLeast(height)
-            val cover = Bitmap.createScaledBitmap(art, coverW, coverH, true)
-            val cropLeft = (coverW - width) / 2
-            val cropTop = (coverH - height) / 2
-            val blurred = blur(Bitmap.createBitmap(cover, cropLeft, cropTop, width, height), blurRadius)
-            canvas.drawBitmap(blurred, 0f, 0f, null)
-            return output
-        }
-
-        // Mode 1 (current): blurred fill + sharp sleeve centred on the narrower axis.
+        // Blur cover: uniform blur over the whole cover, centred (middle of image shows).
         val coverScale = maxOf(width.toFloat() / art.width, height.toFloat() / art.height)
         val coverW = (art.width * coverScale).toInt().coerceAtLeast(width)
         val coverH = (art.height * coverScale).toInt().coerceAtLeast(height)
@@ -167,21 +153,6 @@ object WallpaperArt {
         val cropTop = (coverH - height) / 2
         val blurred = blur(Bitmap.createBitmap(cover, cropLeft, cropTop, width, height), blurRadius)
         canvas.drawBitmap(blurred, 0f, 0f, null)
-        canvas.drawColor(BLUR_DARKEN)
-        val fade = Paint()
-        fade.shader = LinearGradient(
-            0f, 0f, 0f, height.toFloat(),
-            intArrayOf(0x66000000, 0x00000000, 0x00000000, 0x66000000),
-            null,
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), fade)
-
-        val artSize = minOf(width, height)
-        val scaled = Bitmap.createScaledBitmap(art, artSize, artSize, true)
-        val left = (width - artSize) / 2f
-        val top = (height - artSize) / 2f
-        canvas.drawBitmap(scaled, left, top, Paint(Paint.FILTER_BITMAP_FLAG))
         return output
     }
 
@@ -202,7 +173,7 @@ object WallpaperArt {
         val pixels = IntArray(w * h)
         src.getPixels(pixels, 0, w, 0, 0, w, h)
         val temp = IntArray(w * h)
-        val r = radius.coerceIn(1, 10)
+        val r = radius.coerceIn(1, 50)
         // Horizontal pass.
         for (y in 0 until h) {
             val row = y * w

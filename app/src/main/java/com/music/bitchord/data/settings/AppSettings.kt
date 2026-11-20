@@ -234,7 +234,7 @@ object AppSettings {
      * refusing with a sentence naming the switch that would allow it — only the
      * second is recoverable by the person it happens to.
      */
-    val wifiOnlyDownloads = MutableStateFlow(true)
+    val wifiOnlyDownloads = MutableStateFlow(false)
 
     /**
      * Keep ordinary downloads in Music/BitChord where other music apps can see
@@ -441,16 +441,16 @@ object AppSettings {
     val diwaliGreetingShown = MutableStateFlow(false)
 
     /** Requests a sustained high-refresh UI. Off keeps Android's automatic policy. */
-    val highPerformanceMode = MutableStateFlow(false)
+    val highPerformanceMode = MutableStateFlow(true)
 
     /** Preferred UI refresh rate while [highPerformanceMode] is enabled. */
     val performanceRefreshRate = MutableStateFlow(DEFAULT_PERFORMANCE_REFRESH_RATE)
 
     /** Stop playback when the app is swiped away from the recent apps screen. */
-    val stopOnTaskRemoved = MutableStateFlow(true)
+    val stopOnTaskRemoved = MutableStateFlow(false)
 
     /** Hides the volume slider on the main player, leaving the rest of the layout to reflow. */
-    val hideVolumeBar = MutableStateFlow(false)
+    val hideVolumeBar = MutableStateFlow(true)
 
     /** Hides the device status bar (clock, battery, notifications) while the main player is open. */
     val hideStatusBarInPlayer = MutableStateFlow(false)
@@ -458,7 +458,7 @@ object AppSettings {
     /** Hides the "Playing from" / "Played by" caption at the top of the main player. */
     val hideSongStatus = MutableStateFlow(false)
 
-    val showQueueHistory = MutableStateFlow(false)
+    val showQueueHistory = MutableStateFlow(true)
 
     /** Swiping a song row plays it next instead of adding it to the end of the queue. */
     val swipeToPlayNext = MutableStateFlow(false)
@@ -467,13 +467,13 @@ object AppSettings {
     val dontRepeatSuggestions = MutableStateFlow(false)
 
     /** Music videos play as their audio version — see [com.music.bitchord.playback.MusicOnlyPlayback]. */
-    val preferMusicOnly = MutableStateFlow(false)
+    val preferMusicOnly = MutableStateFlow(true)
 
     /** Home's Recents shelf. */
     val hideRecents = MutableStateFlow(false)
 
     /** Music videos come off the Home feed, along with any shelf left with nothing else on it. */
-    val hideHomeVideos = MutableStateFlow(false)
+    val hideHomeVideos = MutableStateFlow(true)
 
     /** Home's Top Picks for You shelf. */
     val hideTopPicks = MutableStateFlow(false)
@@ -499,7 +499,7 @@ object AppSettings {
     /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
     val liquidGlass = MutableStateFlow(false)
     /** When on, the current track's album art becomes the wallpaper, which is what Android 13+ derives Monet colours from. */
-    val autoWallpaper = MutableStateFlow(false)
+    val autoWallpaper = MutableStateFlow(true)
 
     /**
      * How the wallpaper (and so the system Monet palette) is applied:
@@ -513,10 +513,10 @@ object AppSettings {
     val autoRestoreWallpaper = MutableStateFlow(true)
 
     /** Wallpaper composition: 0 = sharp sleeve on blurred fill (current); 1 = uniform blur over the whole cover. */
-    val wallpaperStyle = MutableStateFlow(0)
+    val wallpaperStyle = MutableStateFlow(1)
 
     /** Blur radius for the wallpaper backdrop, 0–10; 0 disables the blur. */
-    val blurRadius = MutableStateFlow(2)
+    val blurRadius = MutableStateFlow(10)
 
     /** Optional: check BitChord-Monet GitHub Releases for updates (default off). */
     val checkMonetReleases = MutableStateFlow(false)
@@ -991,7 +991,7 @@ object AppSettings {
         ).coerceIn(MIN_UPGRADE_LENGTH_SLACK_SECONDS, MAX_UPGRADE_LENGTH_SLACK_SECONDS)
         migrateDownloadQuality()
         downloadQuality.value = readDownloadQuality()
-        wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
+        wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, false)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
@@ -1044,20 +1044,20 @@ object AppSettings {
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
         diwaliGreetingShown.value = prefs.getBoolean(KEY_DIWALI_GREETING_SHOWN, false)
-        highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
+        highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, true)
         performanceRefreshRate.value = normalizePerformanceRefreshRate(
             prefs.getInt(KEY_PERFORMANCE_REFRESH_RATE, DEFAULT_PERFORMANCE_REFRESH_RATE),
         )
-        stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, true)
-        hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
+        stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, false)
+        hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, true)
         hideStatusBarInPlayer.value = prefs.getBoolean(KEY_HIDE_STATUS_BAR_IN_PLAYER, false)
         hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, false)
-        showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, false)
+        showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, true)
         swipeToPlayNext.value = prefs.getBoolean(KEY_SWIPE_TO_PLAY_NEXT, false)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
-        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, false)
+        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, true)
         hideRecents.value = prefs.getBoolean(KEY_HIDE_RECENTS, false)
-        hideHomeVideos.value = prefs.getBoolean(KEY_HIDE_HOME_VIDEOS, false)
+        hideHomeVideos.value = prefs.getBoolean(KEY_HIDE_HOME_VIDEOS, true)
         hideTopPicks.value = prefs.getBoolean(KEY_HIDE_TOP_PICKS, false)
         hideHomeMoods.value = prefs.getBoolean(KEY_HIDE_HOME_MOODS, false)
         squareVideoThumbnails.value = prefs.getBoolean(KEY_SQUARE_VIDEO_THUMBNAILS, false)
@@ -1066,11 +1066,11 @@ object AppSettings {
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
-        autoWallpaper.value = prefs.getBoolean(KEY_AUTO_WALLPAPER, false)
+        autoWallpaper.value = prefs.getBoolean(KEY_AUTO_WALLPAPER, true)
         wallpaperStrategy.value = prefs.getInt(KEY_WALLPAPER_STRATEGY, 1)
         autoRestoreWallpaper.value = prefs.getBoolean(KEY_AUTO_RESTORE_WALLPAPER, true)
-        wallpaperStyle.value = prefs.getInt(KEY_WALLPAPER_STYLE, 0)
-        blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 2)
+        wallpaperStyle.value = prefs.getInt(KEY_WALLPAPER_STYLE, 1)
+        blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 10)
         checkMonetReleases.value = prefs.getBoolean(KEY_CHECK_MONET_RELEASES, false)
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
